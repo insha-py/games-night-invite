@@ -40,9 +40,10 @@
       text-transform: uppercase;
     }
 
-    .correct { background-color: #538d4e; border: none; }
-    .present { background-color: #b59f3b; border: none; }
-    .absent { background-color: #3a3a3c; border: none; }
+    /* Combined status classes for tiles and keys */
+    .correct, .key.correct { background-color: #538d4e !important; border: none; }
+    .present, .key.present { background-color: #b59f3b !important; border: none; }
+    .absent, .key.absent { background-color: #3a3a3c !important; border: none; }
 
     #keyboard {
       margin-top: 25px;
@@ -62,6 +63,7 @@
       cursor: pointer;
       font-weight: bold;
       font-size: 0.9rem;
+      transition: background-color 0.3s;
     }
 
     .key.large {
@@ -129,15 +131,18 @@
         .map(w => w.trim().toUpperCase())
         .filter(w => w.length === 5);
 
+      // Ensure the answer is in the valid list
+      if (!validWords.includes(answer)) validWords.push(answer);
+
       wordsLoaded = true;
       message.textContent = "";
-
-      console.log("Words loaded:", validWords.length);
-      console.log("Contains GAMES?", validWords.includes("GAMES"));
     })
     .catch(err => {
       console.error(err);
       message.textContent = "Error loading word list";
+      // Fallback list so the game works even without the file
+      validWords = ["GAMES", "TABLE", "BOARD", "CHESS", "CARDS"];
+      wordsLoaded = true;
     });
 
   // Create grid
@@ -148,7 +153,7 @@
     grid.appendChild(tile);
   }
 
-  // Keyboard
+  // Keyboard layout
   const keys = [
     ["Q","W","E","R","T","Y","U","I","O","P"],
     ["A","S","D","F","G","H","J","K","L"],
@@ -163,6 +168,7 @@
       const button = document.createElement("button");
       button.textContent = key;
       button.classList.add("key");
+      button.setAttribute("data-key", key); // For easy selection later
 
       if (key === "ENTER" || key === "DEL") {
         button.classList.add("large");
@@ -183,20 +189,14 @@
 
   function handleInput(key) {
     if (currentRow >= 6) return;
-
-    if (!wordsLoaded) {
-      message.textContent = "Loading word list...";
-      return;
-    }
+    if (!wordsLoaded) return;
 
     if (key === "ENTER") {
       if (currentGuess.length !== 5) return;
-
       if (!validWords.includes(currentGuess)) {
         message.textContent = "Not a valid word";
         return;
       }
-
       checkGuess();
     } 
     else if (key === "DEL") {
@@ -219,53 +219,66 @@
     }
   }
 
-function checkGuess() {
-  const rowStart = currentRow * 5;
-  const guessArray = currentGuess.split("");
-  const answerArray = answer.split(""); // We will modify this to track used letters
-  const tileStatuses = new Array(5).fill("absent");
+  function checkGuess() {
+    const rowStart = currentRow * 5;
+    const guessArray = currentGuess.split("");
+    const answerArray = answer.split("");
+    const tileStatuses = new Array(5).fill("absent");
 
-  // First pass: Find CORRECT matches (Green)
-  // We do this first so green letters are "reserved" and don't get marked yellow
-  guessArray.forEach((letter, i) => {
-    if (letter === answerArray[i]) {
-      tileStatuses[i] = "correct";
-      answerArray[i] = null; // Remove this letter from the "available" pool
+    // Pass 1: Check for Greens (Correct)
+    guessArray.forEach((letter, i) => {
+      if (letter === answerArray[i]) {
+        tileStatuses[i] = "correct";
+        answerArray[i] = null; // Mark as "used" in the answer
+      }
+    });
+
+    // Pass 2: Check for Yellows (Present)
+    guessArray.forEach((letter, i) => {
+      if (tileStatuses[i] !== "correct" && answerArray.includes(letter)) {
+        tileStatuses[i] = "present";
+        answerArray[answerArray.indexOf(letter)] = null; // Mark as "used"
+      }
+    });
+
+    // Update Grid UI and Keyboard UI
+    guessArray.forEach((letter, i) => {
+      const tile = document.getElementById(`tile-${rowStart + i}`);
+      const status = tileStatuses[i];
+      
+      // Update Tile
+      tile.classList.add(status);
+
+      // Update Keyboard Button
+      const keyBtn = document.querySelector(`.key[data-key="${letter}"]`);
+      if (keyBtn) {
+        if (status === "correct") {
+          keyBtn.classList.remove("present", "absent");
+          keyBtn.classList.add("correct");
+        } else if (status === "present" && !keyBtn.classList.contains("correct")) {
+          keyBtn.classList.remove("absent");
+          keyBtn.classList.add("present");
+        } else if (status === "absent" && !keyBtn.classList.contains("correct") && !keyBtn.classList.contains("present")) {
+          keyBtn.classList.add("absent");
+        }
+      }
+    });
+
+    if (currentGuess === answer) {
+      message.textContent = "🎉 Correct!";
+      invite.style.display = "block";
+      currentRow = 6;
+      return;
     }
-  });
 
-  // Second pass: Find PRESENT matches (Yellow)
-  guessArray.forEach((letter, i) => {
-    if (tileStatuses[i] !== "correct" && answerArray.includes(letter)) {
-      tileStatuses[i] = "present";
-      // Remove the specific instance of the letter we just matched
-      answerArray[answerArray.indexOf(letter)] = null; 
+    currentGuess = "";
+    currentRow++;
+
+    if (currentRow === 6) {
+      message.textContent = "Still invited 😉";
+      invite.style.display = "block";
     }
-  });
-
-  // Update UI - This is where the visual bug is fixed
-  for (let i = 0; i < 5; i++) {
-    const tile = document.getElementById(`tile-${rowStart + i}`);
-    // Clear any previous status classes to avoid color conflicts
-    tile.classList.remove("correct", "present", "absent"); 
-    tile.classList.add(tileStatuses[i]);
   }
-
-  if (currentGuess === answer) {
-    message.textContent = "🎉 Correct!";
-    invite.style.display = "block";
-    currentRow = 6;
-    return;
-  }
-
-  currentGuess = "";
-  currentRow++;
-  
-  if (currentRow === 6) {
-    message.textContent = "Still invited 😉";
-    invite.style.display = "block";
-  }
-}
 </script>
 
 </body>
