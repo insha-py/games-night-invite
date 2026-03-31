@@ -13,6 +13,7 @@
       text-align: center;
       margin: 0;
       padding: 10px;
+      overflow-x: hidden;
     }
 
     h1 {
@@ -40,7 +41,6 @@
       text-transform: uppercase;
     }
 
-    /* Combined status classes for tiles and keys */
     .correct, .key.correct { background-color: #538d4e !important; border: none; }
     .present, .key.present { background-color: #b59f3b !important; border: none; }
     .absent, .key.absent { background-color: #3a3a3c !important; border: none; }
@@ -54,7 +54,7 @@
     }
 
     .key {
-      padding: 10px;
+      padding: 15px 10px;
       margin: 2px;
       border-radius: 4px;
       border: none;
@@ -63,46 +63,85 @@
       cursor: pointer;
       font-weight: bold;
       font-size: 0.9rem;
-      transition: background-color 0.3s;
+      text-transform: uppercase;
     }
 
     .key.large {
-      padding: 10px 14px;
+      padding: 15px 14px;
     }
 
     #message {
       margin-top: 15px;
       font-size: 1rem;
       min-height: 20px;
+      font-weight: bold;
     }
 
-    #invite {
+    /* POP-UP MODAL STYLES */
+    #modal-overlay {
       display: none;
-      margin-top: 30px;
-      padding: 20px;
-      border: 2px solid #538d4e;
-      border-radius: 10px;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.85);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
     }
 
-    #invite h2 {
+    #invite-modal {
+      background-color: #1a1a1b;
+      border: 2px solid #538d4e;
+      padding: 40px 20px;
+      border-radius: 15px;
+      max-width: 90%;
+      width: 400px;
+      position: relative;
+      transform: scale(0.7);
+      animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+
+    @keyframes popIn {
+      to { transform: scale(1); }
+    }
+
+    #invite-modal h2 {
       color: #538d4e;
+      font-size: 2rem;
+      margin-top: 0;
+    }
+
+    .close-btn {
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      cursor: pointer;
+      font-size: 1.5rem;
+      color: #818384;
     }
   </style>
 </head>
 
 <body>
 
-<h1>Guess the word</h1>
+<h1>Guess the Word</h1>
 
 <div id="grid"></div>
 <div id="message"></div>
 <div id="keyboard"></div>
 
-<div id="invite">
-  <h2>🎉 You're Invited!</h2>
-  <p>You are invited to <b>Insha & Prithvij's Games Night</b></p>
-  <p>🗓 Saturday, 4th April</p>
-  <p>⏰ 8:00 PM</p>
+<div id="modal-overlay">
+  <div id="invite-modal">
+    <span class="close-btn" onclick="closeModal()">&times;</span>
+    <h2>🎉 You're Invited!</h2>
+    <p style="font-size: 1.2rem;">To <b>Insha & Prithvij's Games Night</b></p>
+    <hr style="border: 0.5px solid #3a3a3c; margin: 20px 0;">
+    <p>🗓 Saturday, 4th April</p>
+    <p>⏰ 8:00 PM</p>
+    <button onclick="closeModal()" style="margin-top: 20px; padding: 10px 20px; background: #538d4e; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">Awesome!</button>
+  </div>
 </div>
 
 <script>
@@ -115,37 +154,23 @@
   const grid = document.getElementById("grid");
   const message = document.getElementById("message");
   const keyboard = document.getElementById("keyboard");
-  const invite = document.getElementById("invite");
+  const overlay = document.getElementById("modal-overlay");
 
-  // Load word list properly
-  message.textContent = "Loading word list...";
-
+  // Load words
   fetch("words.txt")
-    .then(response => {
-      if (!response.ok) throw new Error("Failed to load words.txt");
-      return response.text();
-    })
+    .then(r => r.text())
     .then(text => {
-      validWords = text
-        .split("\n")
-        .map(w => w.trim().toUpperCase())
-        .filter(w => w.length === 5);
-
-      // Ensure the answer is in the valid list
+      validWords = text.split("\n").map(w => w.trim().toUpperCase()).filter(w => w.length === 5);
       if (!validWords.includes(answer)) validWords.push(answer);
-
       wordsLoaded = true;
       message.textContent = "";
     })
-    .catch(err => {
-      console.error(err);
-      message.textContent = "Error loading word list";
-      // Fallback list so the game works even without the file
+    .catch(() => {
       validWords = ["GAMES", "TABLE", "BOARD", "CHESS", "CARDS"];
       wordsLoaded = true;
     });
 
-  // Create grid
+  // Create Grid
   for (let i = 0; i < 30; i++) {
     const tile = document.createElement("div");
     tile.classList.add("tile");
@@ -153,7 +178,7 @@
     grid.appendChild(tile);
   }
 
-  // Keyboard layout
+  // Keyboard
   const keys = [
     ["Q","W","E","R","T","Y","U","I","O","P"],
     ["A","S","D","F","G","H","J","K","L"],
@@ -163,21 +188,14 @@
   keys.forEach(row => {
     const rowDiv = document.createElement("div");
     rowDiv.classList.add("key-row");
-
     row.forEach(key => {
-      const button = document.createElement("button");
-      button.textContent = key;
-      button.classList.add("key");
-      button.setAttribute("data-key", key); // For easy selection later
-
-      if (key === "ENTER" || key === "DEL") {
-        button.classList.add("large");
-      }
-
-      button.onclick = () => handleInput(key);
-      rowDiv.appendChild(button);
+      const btn = document.createElement("button");
+      btn.textContent = key;
+      btn.classList.add("key");
+      if (key === "ENTER" || key === "DEL") btn.classList.add("large");
+      btn.onclick = () => handleInput(key);
+      rowDiv.appendChild(btn);
     });
-
     keyboard.appendChild(rowDiv);
   });
 
@@ -188,9 +206,7 @@
   });
 
   function handleInput(key) {
-    if (currentRow >= 6) return;
-    if (!wordsLoaded) return;
-
+    if (currentRow >= 6 || !wordsLoaded) return;
     if (key === "ENTER") {
       if (currentGuess.length !== 5) return;
       if (!validWords.includes(currentGuess)) {
@@ -198,86 +214,76 @@
         return;
       }
       checkGuess();
-    } 
-    else if (key === "DEL") {
+    } else if (key === "DEL") {
       currentGuess = currentGuess.slice(0, -1);
       updateGrid();
-    } 
-    else {
-      if (currentGuess.length < 5) {
-        currentGuess += key;
-        updateGrid();
-      }
+    } else if (currentGuess.length < 5) {
+      currentGuess += key;
+      updateGrid();
     }
   }
 
   function updateGrid() {
     message.textContent = "";
     for (let i = 0; i < 5; i++) {
-      const tile = document.getElementById(`tile-${currentRow * 5 + i}`);
-      tile.textContent = currentGuess[i] || "";
+      document.getElementById(`tile-${currentRow * 5 + i}`).textContent = currentGuess[i] || "";
     }
   }
 
   function checkGuess() {
     const rowStart = currentRow * 5;
-    const guessArray = currentGuess.split("");
-    const answerArray = answer.split("");
-    const tileStatuses = new Array(5).fill("absent");
+    const guessArr = currentGuess.split("");
+    const answerArr = answer.split("");
+    const statuses = new Array(5).fill("absent");
 
-    // Pass 1: Check for Greens (Correct)
-    guessArray.forEach((letter, i) => {
-      if (letter === answerArray[i]) {
-        tileStatuses[i] = "correct";
-        answerArray[i] = null; // Mark as "used" in the answer
+    guessArr.forEach((l, i) => {
+      if (l === answerArr[i]) {
+        statuses[i] = "correct";
+        answerArr[i] = null;
       }
     });
 
-    // Pass 2: Check for Yellows (Present)
-    guessArray.forEach((letter, i) => {
-      if (tileStatuses[i] !== "correct" && answerArray.includes(letter)) {
-        tileStatuses[i] = "present";
-        answerArray[answerArray.indexOf(letter)] = null; // Mark as "used"
+    guessArr.forEach((l, i) => {
+      if (statuses[i] !== "correct" && answerArr.includes(l)) {
+        statuses[i] = "present";
+        answerArr[answerArr.indexOf(l)] = null;
       }
     });
 
-    // Update Grid UI and Keyboard UI
-    guessArray.forEach((letter, i) => {
+    guessArr.forEach((l, i) => {
       const tile = document.getElementById(`tile-${rowStart + i}`);
-      const status = tileStatuses[i];
+      tile.classList.add(statuses[i]);
       
-      // Update Tile
-      tile.classList.add(status);
-
-      // Update Keyboard Button
-      const keyBtn = document.querySelector(`.key[data-key="${letter}"]`);
+      const keyBtn = Array.from(document.querySelectorAll('.key')).find(b => b.textContent === l);
       if (keyBtn) {
-        if (status === "correct") {
+        if (statuses[i] === "correct") {
           keyBtn.classList.remove("present", "absent");
           keyBtn.classList.add("correct");
-        } else if (status === "present" && !keyBtn.classList.contains("correct")) {
+        } else if (statuses[i] === "present" && !keyBtn.classList.contains("correct")) {
           keyBtn.classList.remove("absent");
           keyBtn.classList.add("present");
-        } else if (status === "absent" && !keyBtn.classList.contains("correct") && !keyBtn.classList.contains("present")) {
+        } else if (statuses[i] === "absent" && !keyBtn.classList.contains("correct") && !keyBtn.classList.contains("present")) {
           keyBtn.classList.add("absent");
         }
       }
     });
 
     if (currentGuess === answer) {
-      message.textContent = "🎉 Correct!";
-      invite.style.display = "block";
+      setTimeout(showInvite, 500);
       currentRow = 6;
-      return;
+    } else {
+      currentGuess = "";
+      currentRow++;
+      if (currentRow === 6) setTimeout(showInvite, 500);
     }
+  }
 
-    currentGuess = "";
-    currentRow++;
+  function showInvite() {
+    overlay.style.display = "flex";
+  }
 
-    if (currentRow === 6) {
-      message.textContent = "Still invited 😉";
-      invite.style.display = "block";
-    }
+  function closeModal() {
+    overlay.style.display = "none";
   }
 </script>
 
