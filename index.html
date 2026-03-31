@@ -219,35 +219,48 @@
     }
   }
 
-  function checkGuess() {
-    for (let i = 0; i < 5; i++) {
-      const tile = document.getElementById(`tile-${currentRow * 5 + i}`);
-      const letter = currentGuess[i];
+function checkGuess() {
+  const rowStart = currentRow * 5;
+  const guessArray = currentGuess.split("");
+  const answerArray = answer.split("");
+  const tileStatuses = new Array(5).fill("absent");
 
-      if (letter === answer[i]) {
-        tile.classList.add("correct");
-      } else if (answer.includes(letter)) {
-        tile.classList.add("present");
-      } else {
-        tile.classList.add("absent");
-      }
+  // First pass: Find CORRECT matches (Green)
+  guessArray.forEach((letter, i) => {
+    if (letter === answerArray[i]) {
+      tileStatuses[i] = "correct";
+      answerArray[i] = null; // Mark as used
     }
+  });
 
-    if (currentGuess === answer) {
-      message.textContent = "🎉 Correct!";
-      invite.style.display = "block";
-      currentRow = 6;
-      return;
+  // Second pass: Find PRESENT matches (Yellow)
+  guessArray.forEach((letter, i) => {
+    if (tileStatuses[i] !== "correct" && answerArray.includes(letter)) {
+      tileStatuses[i] = "present";
+      answerArray[answerArray.indexOf(letter)] = null; // Mark as used
     }
+  });
 
-    currentGuess = "";
-    currentRow++;
-
-    if (currentRow === 6) {
-      message.textContent = "Still invited 😉";
-      invite.style.display = "block";
-    }
+  // Update UI
+  for (let i = 0; i < 5; i++) {
+    const tile = document.getElementById(`tile-${rowStart + i}`);
+    tile.classList.add(tileStatuses[i]);
   }
+
+  if (currentGuess === answer) {
+    message.textContent = "🎉 Correct!";
+    invite.style.display = "block";
+    currentRow = 6;
+    return;
+  }
+
+  currentGuess = "";
+  currentRow++;
+  if (currentRow === 6) {
+    message.textContent = "Still invited 😉";
+    invite.style.display = "block";
+  }
+}
 </script>
 
 </body>
