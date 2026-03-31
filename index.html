@@ -107,7 +107,7 @@
       to { transform: scale(1); }
     }
 
-    #invite-modal h2 {
+    #invite-title {
       color: #538d4e;
       font-size: 2rem;
       margin-top: 0;
@@ -135,12 +135,13 @@
 <div id="modal-overlay">
   <div id="invite-modal">
     <span class="close-btn" onclick="closeModal()">&times;</span>
-    <h2>🎉 You're Invited!</h2>
-    <p style="font-size: 1.2rem;">To <b>Insha & Prithvij's Games Night</b></p>
+    <h2 id="invite-title">🎉 You're Invited!</h2>
+    <p id="invite-status" style="font-size: 1.2rem;"></p>
+    <p style="font-size: 1.1rem;">To <b>Insha & Prithvij's Games Night</b></p>
     <hr style="border: 0.5px solid #3a3a3c; margin: 20px 0;">
     <p>🗓 Saturday, 4th April</p>
     <p>⏰ 8:00 PM</p>
-    <button onclick="closeModal()" style="margin-top: 20px; padding: 10px 20px; background: #538d4e; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">Awesome!</button>
+    <button onclick="closeModal()" style="margin-top: 20px; padding: 10px 20px; background: #538d4e; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">See you there!</button>
   </div>
 </div>
 
@@ -170,7 +171,6 @@
       wordsLoaded = true;
     });
 
-  // Create Grid
   for (let i = 0; i < 30; i++) {
     const tile = document.createElement("div");
     tile.classList.add("tile");
@@ -178,7 +178,6 @@
     grid.appendChild(tile);
   }
 
-  // Keyboard
   const keys = [
     ["Q","W","E","R","T","Y","U","I","O","P"],
     ["A","S","D","F","G","H","J","K","L"],
@@ -269,16 +268,27 @@
     });
 
     if (currentGuess === answer) {
-      setTimeout(showInvite, 500);
+      setTimeout(() => showInvite(true), 500);
       currentRow = 6;
     } else {
       currentGuess = "";
       currentRow++;
-      if (currentRow === 6) setTimeout(showInvite, 500);
+      if (currentRow === 6) setTimeout(() => showInvite(false), 500);
     }
   }
 
-  function showInvite() {
+  function showInvite(isWin) {
+    const title = document.getElementById("invite-title");
+    const status = document.getElementById("invite-status");
+
+    if (isWin) {
+      title.textContent = "🎉 You're Invited!";
+      status.textContent = "You got it!";
+    } else {
+      title.textContent = "Oh no! But...";
+      status.textContent = "You're still invited 😉";
+    }
+
     overlay.style.display = "flex";
   }
 
