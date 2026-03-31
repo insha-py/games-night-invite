@@ -222,14 +222,15 @@
 function checkGuess() {
   const rowStart = currentRow * 5;
   const guessArray = currentGuess.split("");
-  const answerArray = answer.split("");
+  const answerArray = answer.split(""); // We will modify this to track used letters
   const tileStatuses = new Array(5).fill("absent");
 
   // First pass: Find CORRECT matches (Green)
+  // We do this first so green letters are "reserved" and don't get marked yellow
   guessArray.forEach((letter, i) => {
     if (letter === answerArray[i]) {
       tileStatuses[i] = "correct";
-      answerArray[i] = null; // Mark as used
+      answerArray[i] = null; // Remove this letter from the "available" pool
     }
   });
 
@@ -237,13 +238,16 @@ function checkGuess() {
   guessArray.forEach((letter, i) => {
     if (tileStatuses[i] !== "correct" && answerArray.includes(letter)) {
       tileStatuses[i] = "present";
-      answerArray[answerArray.indexOf(letter)] = null; // Mark as used
+      // Remove the specific instance of the letter we just matched
+      answerArray[answerArray.indexOf(letter)] = null; 
     }
   });
 
-  // Update UI
+  // Update UI - This is where the visual bug is fixed
   for (let i = 0; i < 5; i++) {
     const tile = document.getElementById(`tile-${rowStart + i}`);
+    // Clear any previous status classes to avoid color conflicts
+    tile.classList.remove("correct", "present", "absent"); 
     tile.classList.add(tileStatuses[i]);
   }
 
@@ -256,6 +260,7 @@ function checkGuess() {
 
   currentGuess = "";
   currentRow++;
+  
   if (currentRow === 6) {
     message.textContent = "Still invited 😉";
     invite.style.display = "block";
