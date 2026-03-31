@@ -108,17 +108,36 @@
   let currentRow = 0;
   let currentGuess = "";
   let validWords = [];
+  let wordsLoaded = false;
 
   const grid = document.getElementById("grid");
   const message = document.getElementById("message");
   const keyboard = document.getElementById("keyboard");
   const invite = document.getElementById("invite");
 
-  // Load word list
+  // Load word list properly
+  message.textContent = "Loading word list...";
+
   fetch("words.txt")
-    .then(response => response.text())
+    .then(response => {
+      if (!response.ok) throw new Error("Failed to load words.txt");
+      return response.text();
+    })
     .then(text => {
-      validWords = text.split("\n").map(w => w.trim().toUpperCase());
+      validWords = text
+        .split("\n")
+        .map(w => w.trim().toUpperCase())
+        .filter(w => w.length === 5);
+
+      wordsLoaded = true;
+      message.textContent = "";
+
+      console.log("Words loaded:", validWords.length);
+      console.log("Contains GAMES?", validWords.includes("GAMES"));
+    })
+    .catch(err => {
+      console.error(err);
+      message.textContent = "Error loading word list";
     });
 
   // Create grid
@@ -129,7 +148,7 @@
     grid.appendChild(tile);
   }
 
-  // Keyboard layout
+  // Keyboard
   const keys = [
     ["Q","W","E","R","T","Y","U","I","O","P"],
     ["A","S","D","F","G","H","J","K","L"],
@@ -156,7 +175,6 @@
     keyboard.appendChild(rowDiv);
   });
 
-  // Physical keyboard support
   document.addEventListener("keydown", (e) => {
     if (/^[a-zA-Z]$/.test(e.key)) handleInput(e.key.toUpperCase());
     else if (e.key === "Enter") handleInput("ENTER");
@@ -166,7 +184,7 @@
   function handleInput(key) {
     if (currentRow >= 6) return;
 
-    if (validWords.length === 0) {
+    if (!wordsLoaded) {
       message.textContent = "Loading word list...";
       return;
     }
