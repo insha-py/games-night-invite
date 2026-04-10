@@ -147,7 +147,7 @@
 </div>
 
 <script>
-  const answer = "GAMES";
+  const answer = "LOSER";
   let currentRow = 0;
   let currentGuess = "";
   let validWords = [];
@@ -168,7 +168,7 @@
       message.textContent = "";
     })
     .catch(() => {
-      validWords = ["GAMES", "TABLE", "BOARD", "CHESS", "CARDS"];
+      validWords = ["LOSER","GAMES", "TABLE", "BOARD", "CHESS", "CARDS"];
       wordsLoaded = true;
     });
 
